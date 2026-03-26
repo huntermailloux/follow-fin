@@ -57,6 +57,14 @@
           }
         </select>
 
+        <label class="toggle-label">
+          <span class="toggle-track" [class.toggle-on]="hideToday">
+            <span class="toggle-thumb"></span>
+          </span>
+          <input type="checkbox" [(ngModel)]="hideToday" (ngModelChange)="onFilterChange()" hidden />
+          Hide today's answer
+        </label>
+
         @if (hasActiveFilters) {
           <button class="clear-filters-btn" (click)="clearFilters()">Clear filters</button>
         }
