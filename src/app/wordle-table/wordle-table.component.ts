@@ -34,9 +34,12 @@ export class WordleTableComponent implements OnInit, OnDestroy {
   totalFiltered = 0;
   readonly pageSize = 50;
 
+  hideToday = true;
+
   loading = true;
   error: string | null = null;
 
+  private readonly todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local time
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   readonly months = [
@@ -127,7 +130,7 @@ export class WordleTableComponent implements OnInit, OnDestroy {
     if (!dateStr) return '—';
     const [y, m, d] = dateStr.split('-').map(Number);
     return new Date(y, m - 1, d).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric'
+      year: 'numeric', month: 'short', day: 'numeric'
     });
   }
 
@@ -135,6 +138,9 @@ export class WordleTableComponent implements OnInit, OnDestroy {
     let words = this.allWords;
     const search = this.searchInput.trim().toLowerCase();
 
+    if (this.hideToday) {
+      words = words.filter(w => w.date !== this.todayStr);
+    }
     if (search) {
       words = words.filter(w => w.solution?.toLowerCase().includes(search));
     }

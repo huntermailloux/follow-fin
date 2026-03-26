@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/daily-wordle",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}
