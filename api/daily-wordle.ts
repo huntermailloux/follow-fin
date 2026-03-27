@@ -11,16 +11,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   yesterday.setUTCDate(yesterday.getUTCDate() - 1);
   const dateStr = yesterday.toISOString().split('T')[0];
 
-  const nytRes = await fetch(`https://www.nytimes.com/svc/wordle/v2/${dateStr}.json`);
-  if (!nytRes.ok) {
-    return res.status(502).json({ error: `NYT API returned ${nytRes.status} for ${dateStr}` });
+  let nytRes: any;
+  let nyt: any;
+  try {
+    nytRes = await fetch(`https://www.nytimes.com/svc/wordle/v2/${dateStr}.json`);
+    if (!nytRes.ok) {
+      return res.status(502).json({ error: `NYT API returned ${nytRes.status} for ${dateStr}` });
+    }
+    nyt = await nytRes.json();
+  } catch (err: any) {
+    return res.status(502).json({ error: `Failed to fetch NYT data: ${err?.message ?? err}` });
   }
 
-  const nyt = await nytRes.json();
+  if (!nyt.solution || !nyt.print_date) {
+    return res.status(502).json({ error: 'Unexpected NYT response shape', received: nyt });
+  }
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_ANON_KEY!
   );
 
   const { error } = await supabase.from('wordle_words').upsert({
@@ -32,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     days_since_launch: nyt.days_since_launch,
   }, { onConflict: 'date' });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return res.status(500).json({ error: error.message, details: error });
 
   return res.status(200).json({ ok: true, date: dateStr, word: nyt.solution });
 }
