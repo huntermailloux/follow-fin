@@ -37,6 +37,7 @@ export class WordleTableComponent implements OnInit, OnDestroy {
   hideToday = true;
 
   loading = true;
+  syncing = false;
   error: string | null = null;
 
   private readonly todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local time
@@ -63,15 +64,51 @@ export class WordleTableComponent implements OnInit, OnDestroy {
     try {
       const words = await this.supabase.getAllWords();
       this.allWords = words;
-      this.availableYears = [...new Set(
-        words.filter(w => w.date).map(w => this.parseYear(w.date!))
-      )].sort((a, b) => b - a);
+      this.buildYears();
       this.applyFilters();
     } catch (err: any) {
       this.error = err.message || 'Failed to load words. Check Supabase credentials.';
     } finally {
       this.loading = false;
     }
+
+    if (!this.error) {
+      await this.syncMissingDays();
+    }
+  }
+
+  private async syncMissingDays() {
+    if (!this.allWords.length) return;
+
+    const today = this.todayStr;
+    const knownDates = this.allWords.map(w => w.date).filter(Boolean) as string[];
+    const mostRecent = knownDates.reduce((a, b) => (a > b ? a : b));
+
+    if (mostRecent >= today) return;
+
+    const nextDay = new Date(mostRecent + 'T00:00:00');
+    nextDay.setDate(nextDay.getDate() + 1);
+    const startDate = nextDay.toISOString().split('T')[0];
+
+    this.syncing = true;
+    try {
+      const newWords = await this.supabase.backfillMissingWords(startDate, today);
+      if (newWords.length > 0) {
+        this.allWords = [...newWords, ...this.allWords];
+        this.buildYears();
+        this.applyFilters();
+      }
+    } catch {
+      // Sync failure is non-fatal
+    } finally {
+      this.syncing = false;
+    }
+  }
+
+  private buildYears() {
+    this.availableYears = [...new Set(
+      this.allWords.filter(w => w.date).map(w => this.parseYear(w.date!))
+    )].sort((a, b) => b - a);
   }
 
   ngOnDestroy() {
