@@ -32,14 +32,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     process.env.SUPABASE_ANON_KEY!
   );
 
-  const { error } = await supabase.from('wordle_words').upsert({
+  const { error } = await supabase.from('wordle_words').insert({
     date:              nyt.print_date,
     solution:          nyt.solution,
     puzzle_id:         nyt.id,
     editor:            nyt.editor,
     print_date:        nyt.print_date,
     days_since_launch: nyt.days_since_launch,
-  }, { onConflict: 'date' });
+  });
 
   if (error) return res.status(500).json({ error: error.message, details: error });
 

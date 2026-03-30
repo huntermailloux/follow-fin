@@ -59,7 +59,7 @@ export class SupabaseService {
     for (const word of words) {
       const { data, error } = await this.supabase
         .from('wordle_words')
-        .upsert(word, { onConflict: 'date' })
+        .insert(word)
         .select('id, date, solution, puzzle_id, editor, print_date, days_since_launch');
 
       if (!error && data) {
