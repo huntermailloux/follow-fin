@@ -44,47 +44,13 @@ export class SupabaseService {
   }
 
   async backfillMissingWords(startDate: string, endDate: string): Promise<WordleWord[]> {
-    const dates = this.dateRange(startDate, endDate);
-    const fetched: WordleWord[] = [];
-
-    for (const date of dates) {
-      try {
-        const res = await fetch(`https://www.nytimes.com/svc/wordle/v2/${date}.json`);
-        if (!res.ok) continue;
-        const nyt = await res.json();
-        if (!nyt.solution || !nyt.print_date) continue;
-
-        const { data, error } = await this.supabase
-          .from('wordle_words')
-          .upsert({
-            date:              nyt.print_date,
-            solution:          nyt.solution,
-            puzzle_id:         nyt.id,
-            editor:            nyt.editor,
-            print_date:        nyt.print_date,
-            days_since_launch: nyt.days_since_launch,
-          }, { onConflict: 'date' })
-          .select('id, date, solution, puzzle_id, editor, print_date, days_since_launch');
-
-        if (!error && data) {
-          fetched.push(...(data as WordleWord[]));
-        }
-      } catch {
-        // Skip dates that fail silently
-      }
-    }
-
-    return fetched;
-  }
-
-  private dateRange(start: string, end: string): string[] {
-    const dates: string[] = [];
-    const current = new Date(start + 'T00:00:00');
-    const last = new Date(end + 'T00:00:00');
-    while (current <= last) {
-      dates.push(current.toISOString().split('T')[0]);
-      current.setDate(current.getDate() + 1);
-    }
-    return dates;
+    const res = await fetch('/api/backfill-wordles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDate, endDate }),
+    });
+    if (!res.ok) return [];
+    const { words } = await res.json();
+    return (words ?? []) as WordleWord[];
   }
 }
