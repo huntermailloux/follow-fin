@@ -10,12 +10,20 @@
           <span class="tagline">Every Wordle word used throughout the history of the game</span>
         </div>
       </div>
-      @if (!loading && !error) {
-        <div class="header-stat">
-          <span class="stat-value">{{ allWords.length.toLocaleString() }}</span>
-          <span class="stat-label">total words</span>
-        </div>
-      }
+      <div class="header-right">
+        @if (!loading && !error) {
+          <div class="header-stat">
+            <span class="stat-value">{{ allWords.length.toLocaleString() }}</span>
+            <span class="stat-label">total words</span>
+          </div>
+        }
+        @if (syncing) {
+          <div class="sync-indicator">
+            <div class="spinner-sm"></div>
+            <span>Syncing…</span>
+          </div>
+        }
+      </div>
     </div>
   </header>
 
