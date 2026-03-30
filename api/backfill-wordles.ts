@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,11 +23,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ words: [] });
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!
-  );
-
   const words: any[] = [];
 
   for (const date of dates) {
@@ -38,21 +32,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const nyt: any = await nytRes.json();
       if (!nyt.solution || !nyt.print_date) continue;
 
-      const { data, error } = await supabase
-        .from('wordle_words')
-        .upsert({
-          date:              nyt.print_date,
-          solution:          nyt.solution,
-          puzzle_id:         nyt.id,
-          editor:            nyt.editor,
-          print_date:        nyt.print_date,
-          days_since_launch: nyt.days_since_launch,
-        }, { onConflict: 'date' })
-        .select('id, date, solution, puzzle_id, editor, print_date, days_since_launch');
-
-      if (!error && data) {
-        words.push(...data);
-      }
+      words.push({
+        date:              nyt.print_date,
+        solution:          nyt.solution,
+        puzzle_id:         nyt.id,
+        editor:            nyt.editor,
+        print_date:        nyt.print_date,
+        days_since_launch: nyt.days_since_launch,
+      });
     } catch {
       // Skip dates that fail
     }

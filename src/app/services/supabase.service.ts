@@ -44,6 +44,7 @@ export class SupabaseService {
   }
 
   async backfillMissingWords(startDate: string, endDate: string): Promise<WordleWord[]> {
+    // Proxy through our serverless function to avoid CORS on the NYT API
     const res = await fetch('/api/backfill-wordles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -51,6 +52,20 @@ export class SupabaseService {
     });
     if (!res.ok) return [];
     const { words } = await res.json();
-    return (words ?? []) as WordleWord[];
+    if (!words?.length) return [];
+
+    // Upsert using the browser Supabase client
+    const fetched: WordleWord[] = [];
+    for (const word of words) {
+      const { data, error } = await this.supabase
+        .from('wordle_words')
+        .upsert(word, { onConflict: 'date' })
+        .select('id, date, solution, puzzle_id, editor, print_date, days_since_launch');
+
+      if (!error && data) {
+        fetched.push(...(data as WordleWord[]));
+      }
+    }
+    return fetched;
   }
 }
